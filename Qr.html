@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Pesan Cafe</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-color: #f4f7f6; 
+            padding: 20px; 
+            display: flex; 
+            justify-content: center;
+        }
+        .container {
+            background: white; 
+            padding: 20px 30px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+            width: 100%; 
+            max-width: 400px;
+        }
+        h2 { text-align: center; color: #333; margin-top: 0; }
+        .table-badge {
+            background: #007bff; color: white; padding: 4px 12px; 
+            border-radius: 20px; font-size: 16px; vertical-align: middle;
+        }
+        .menu-item { 
+            border: 1px solid #eee; 
+            padding: 15px; 
+            margin-bottom: 12px; 
+            border-radius: 8px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            transition: 0.2s;
+        }
+        .menu-item:hover { border-color: #007bff; }
+        .menu-info { display: flex; flex-direction: column; }
+        .menu-name { font-weight: bold; font-size: 15px; color: #222; }
+        .menu-price { color: #666; font-size: 13px; margin-top: 4px; }
+        input[type="number"] { 
+            width: 60px; padding: 6px; border: 1px solid #ccc; 
+            border-radius: 6px; text-align: center;
+        }
+        .btn-order { 
+            background-color: #28a745; color: white; padding: 12px; 
+            border: none; border-radius: 8px; cursor: pointer; 
+            width: 100%; font-size: 16px; font-weight: bold; 
+            margin-top: 10px; transition: 0.2s;
+        }
+        .btn-order:hover { background-color: #218838; }
+        label { display: flex; align-items: center; cursor: pointer; gap: 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Order Area <span id="display-meja" class="table-badge">Meja ?</span></h2>
+        <p style="text-align: center; color: #666; font-size: 14px;">Pilih menu yang ingin dipesan:</p>
+
+        <div id="menu-container">
+            <div class="menu-item">
+                <label>
+                    <input type="checkbox" class="item-check" value="Es Kopi Susu Aren" data-price="18000">
+                    <div class="menu-info">
+                        <span class="menu-name">Es Kopi Susu Aren</span>
+                        <span class="menu-price">Rp 18.000</span>
+                    </div>
+                </label>
+                <input type="number" class="item-qty" min="1" value="1" disabled>
+            </div>
+
+            <div class="menu-item">
+                <label>
+                    <input type="checkbox" class="item-check" value="Matcha Latte" data-price="22000">
+                    <div class="menu-info">
+                        <span class="menu-name">Matcha Latte</span>
+                        <span class="menu-price">Rp 22.000</span>
+                    </div>
+                </label>
+                <input type="number" class="item-qty" min="1" value="1" disabled>
+            </div>
+
+            <div class="menu-item">
+                <label>
+                    <input type="checkbox" class="item-check" value="Platter Snack" data-price="25000">
+                    <div class="menu-info">
+                        <span class="menu-name">Platter Snack</span>
+                        <span class="menu-price">Rp 25.000</span>
+                    </div>
+                </label>
+                <input type="number" class="item-qty" min="1" value="1" disabled>
+            </div>
+        </div>
+
+        <button class="btn-order" onclick="prosesPesanan()">Kirim Pesanan</button>
+    </div>
+
+    <script>
+        // 1. Ambil Parameter Nomor Meja dari URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const nomorMeja = urlParams.get('meja');
+
+        // 2. Tampilkan di UI
+        const badgeMeja = document.getElementById('display-meja');
+        if (nomorMeja) {
+            badgeMeja.innerText = `Meja ${nomorMeja}`;
+        } else {
+            badgeMeja.innerText = 'Meja N/A';
+            badgeMeja.style.backgroundColor = '#dc3545'; // Warna merah jika gagal
+            console.warn("Nomor meja tidak ditemukan di URL. Tambahkan '?meja=X' di URL.");
+        }
+
+        // 3. Event Listener untuk mengaktifkan/menonaktifkan input jumlah
+        document.querySelectorAll('.item-check').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const qtyInput = this.closest('.menu-item').querySelector('.item-qty');
+                qtyInput.disabled = !this.checked;
+                if (!this.checked) qtyInput.value = 1; // Reset value jika di-uncheck
+            });
+        });
+
+        // 4. Fungsi memproses pesanan dan output JSON ke console
+        function prosesPesanan() {
+            const pesanan = [];
+            let totalHarga = 0;
+
+            // Loop semua checkbox yang dicentang
+            document.querySelectorAll('.item-check:checked').forEach(checkedItem => {
+                const namaMenu = checkedItem.value;
+                const harga = parseInt(checkedItem.getAttribute('data-price'));
+                const qty = parseInt(checkedItem.closest('.menu-item').querySelector('.item-qty').value);
+                
+                pesanan.push({
+                    menu: namaMenu,
+                    harga_satuan: harga,
+                    jumlah: qty,
+                    subtotal: harga * qty
+                });
+
+                totalHarga += (harga * qty);
+            });
+
+            // Validasi jika kosong
+            if (pesanan.length === 0) {
+                alert("Silakan pilih minimal satu menu!");
+                return;
+            }
+
+            // 5. Susun struktur data final untuk dikirim/ditampilkan
+            const dataOrder = {
+                meja: nomorMeja || "Tanpa Meja",
+                timestamp: new Date().toISOString(),
+                items: pesanan,
+                total_pembayaran: totalHarga
+            };
+
+            // 6. Output ke Console sesuai instruksi
+            console.log("=============================");
+            console.log("📥 PESANAN BARU DITERIMA");
+            console.log("=============================");
+            console.log(dataOrder);
+            
+            alert("Cek Console (F12 / Inspect Element) untuk melihat output datanya!");
+        }
+    </script>
+</body>
+</html>
